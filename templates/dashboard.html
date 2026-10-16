@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt OCR & Financial Intelligence API</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+    .pulse-subtle { animation: pulse-subtle 2s infinite; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
+
+  <!-- Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-receipt text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Receipt OCR <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">API v1.0</span>
+          </h1>
+          <p class="text-xs text-slate-400">Intelligent Document Extraction & Expense Tracking</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/api/docs/" target="_blank" class="text-xs px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-2 transition">
+          <i class="fa-solid fa-bolt text-amber-400"></i> Swagger UI
+        </a>
+        <a href="/api/redoc/" target="_blank" class="text-xs px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-2 transition">
+          <i class="fa-solid fa-book-open text-blue-400"></i> ReDoc
+        </a>
+        <a href="/admin/" target="_blank" class="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-md shadow-indigo-600/30 transition">
+          <i class="fa-solid fa-lock"></i> Admin
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Hero / Metrics Overview -->
+    <section id="metricsSection" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+          <span>Total Receipts</span>
+          <i class="fa-solid fa-file-invoice text-indigo-400 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-white mt-2" id="statTotalCount">--</div>
+        <div class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+          <i class="fa-solid fa-circle-check"></i> Processed & stored
+        </div>
+      </div>
+
+      <div class="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+          <span>Total Expenditure</span>
+          <i class="fa-solid fa-dollar-sign text-emerald-400 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-emerald-400 mt-2" id="statTotalSpent">$--</div>
+        <div class="text-xs text-slate-400 mt-1">Aggregated value</div>
+      </div>
+
+      <div class="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+          <span>Avg Transaction</span>
+          <i class="fa-solid fa-chart-line text-blue-400 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-white mt-2" id="statAvgSpent">$--</div>
+        <div class="text-xs text-slate-400 mt-1">Per transaction avg</div>
+      </div>
+
+      <div class="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/60 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+          <span>OCR Pipeline Status</span>
+          <i class="fa-solid fa-microchip text-purple-400 text-sm"></i>
+        </div>
+        <div class="text-lg font-bold text-white mt-2 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+          <span id="statEngine">Operational</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1" id="statEngineDetails">Auto-adaptive engine</div>
+      </div>
+    </section>
+
+    <!-- Upload & Live Processing Studio -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Upload Card -->
+      <div class="lg:col-span-5 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i> Upload Receipt
+            </h2>
+            <span class="text-xs text-slate-400">JPG, PNG, WEBP, TIFF</span>
+          </div>
+
+          <!-- Drag and drop zone -->
+          <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition bg-slate-900/40 relative group">
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+            <div id="uploadPrompt" class="space-y-3">
+              <div class="w-14 h-14 mx-auto rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-xl group-hover:scale-110 transition">
+                <i class="fa-solid fa-camera"></i>
+              </div>
+              <div class="text-sm font-medium text-slate-300">
+                Drag and drop your receipt here, or <span class="text-indigo-400 underline">browse</span>
+              </div>
+              <p class="text-xs text-slate-500">Auto-deskew, OCR text scanning & parsing enabled</p>
+            </div>
+
+            <!-- Image Preview -->
+            <div id="previewContainer" class="hidden relative max-h-72 overflow-hidden rounded-lg">
+              <img id="imagePreview" src="" alt="Preview" class="w-full object-contain max-h-72 rounded-lg border border-slate-700">
+              <button type="button" id="clearImageBtn" class="absolute top-2 right-2 px-2 py-1 bg-red-600/80 hover:bg-red-600 text-white rounded text-xs backdrop-blur">
+                <i class="fa-solid fa-xmark"></i> Remove
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Samples Selector -->
+          <div class="mt-4">
+            <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Try Sample Receipts:</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="loadSampleReceipt('coffee')" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500 text-slate-300 hover:text-white transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-mug-hot text-amber-400"></i> Cafe
+              </button>
+              <button type="button" onclick="loadSampleReceipt('grocery')" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500 text-slate-300 hover:text-white transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-basket-shopping text-emerald-400"></i> Grocery
+              </button>
+              <button type="button" onclick="loadSampleReceipt('restaurant')" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500 text-slate-300 hover:text-white transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-utensils text-rose-400"></i> Bistro
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-6 flex gap-3">
+          <button id="processBtn" class="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Process & Store
+          </button>
+          <button id="extractBtn" class="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-sm transition flex items-center justify-center gap-2" title="Stateless Extraction (No DB save)">
+            <i class="fa-solid fa-bolt"></i> Extract Only
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Display Studio -->
+      <div class="lg:col-span-7 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-4 mb-4">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-code text-emerald-400"></i> Extraction Results
+            </h2>
+            <div id="processingBadge" class="hidden text-xs px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1.5 pulse-subtle">
+              <i class="fa-solid fa-spinner fa-spin"></i> Running OCR Pipeline...
+            </div>
+          </div>
+
+          <div id="emptyResult" class="text-center py-16 text-slate-500 space-y-2">
+            <i class="fa-solid fa-file-circle-check text-4xl text-slate-600"></i>
+            <p class="text-sm">Upload or select a sample receipt to view structured financial extraction</p>
+          </div>
+
+          <!-- Structured Result View -->
+          <div id="resultsCard" class="hidden space-y-6">
+            
+            <!-- Summary Badges -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-xs text-slate-400 block">Merchant</span>
+                <span id="resMerchant" class="text-sm font-bold text-white truncate block">--</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-xs text-slate-400 block">Date</span>
+                <span id="resDate" class="text-sm font-bold text-white block">--</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-xs text-slate-400 block">Total Amount</span>
+                <span id="resTotal" class="text-sm font-black text-emerald-400 block">--</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-xs text-slate-400 block">Category</span>
+                <span id="resCategory" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 inline-block mt-0.5">--</span>
+              </div>
+            </div>
+
+            <!-- Financial Breakdown Table -->
+            <div class="grid grid-cols-3 gap-3 text-xs bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+              <div><span class="text-slate-500">Subtotal:</span> <strong id="resSubtotal" class="text-slate-300">--</strong></div>
+              <div><span class="text-slate-500">Tax:</span> <strong id="resTax" class="text-slate-300">--</strong></div>
+              <div><span class="text-slate-500">Tip:</span> <strong id="resTip" class="text-slate-300">--</strong></div>
+              <div><span class="text-slate-500">Payment:</span> <strong id="resPayment" class="text-slate-300">--</strong></div>
+              <div><span class="text-slate-500">Engine:</span> <strong id="resEngine" class="text-slate-300">--</strong></div>
+              <div><span class="text-slate-500">Confidence:</span> <strong id="resConfidence" class="text-emerald-400">--</strong></div>
+            </div>
+
+            <!-- Line Items Table -->
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Itemized Breakdown</h3>
+              <div class="overflow-x-auto rounded-xl border border-slate-700/70">
+                <table class="w-full text-left text-xs text-slate-300">
+                  <thead class="bg-slate-900 text-slate-400 uppercase tracking-wider border-b border-slate-700/70">
+                    <tr>
+                      <th class="py-2 px-3">Description</th>
+                      <th class="py-2 px-3 text-center">Qty</th>
+                      <th class="py-2 px-3 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lineItemsTableBody" class="divide-y divide-slate-800 bg-slate-900/40">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Raw OCR Text Accordion -->
+            <details class="bg-slate-900/60 rounded-xl border border-slate-800 p-3">
+              <summary class="text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-200">
+                View Raw OCR Text Dump
+              </summary>
+              <pre id="resRawText" class="mt-2 text-xs text-slate-400 font-mono overflow-x-auto p-3 bg-slate-950 rounded-lg max-h-40 border border-slate-800"></pre>
+            </details>
+
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-500">
+          <span>Powered by Django REST Framework & Adaptive OCR</span>
+          <a href="/api/receipts/" target="_blank" class="text-indigo-400 hover:underline">View raw JSON endpoint →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Receipts History Table -->
+    <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700/80 pb-4">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i> Processed Receipts History
+          </h2>
+          <p class="text-xs text-slate-400">All scanned receipts stored with search & filter capabilities</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/api/receipts/export/?export_format=csv" class="text-xs px-3 py-1.5 bg-slate-900 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i> Export CSV
+          </a>
+          <button onclick="loadReceipts()" class="text-xs px-3 py-1.5 bg-slate-900 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-700/70">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900 text-slate-400 uppercase tracking-wider border-b border-slate-700/70">
+            <tr>
+              <th class="py-2.5 px-3">Merchant</th>
+              <th class="py-2.5 px-3">Date</th>
+              <th class="py-2.5 px-3">Category</th>
+              <th class="py-2.5 px-3 text-right">Total</th>
+              <th class="py-2.5 px-3">Payment</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody" class="divide-y divide-slate-800 bg-slate-900/30">
+            <tr>
+              <td colspan="7" class="py-6 text-center text-slate-500">Loading receipt records...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>Receipt OCR API &bull; Built with Django REST Framework, Tesseract OCR, & Heuristic NLP</div>
+      <div class="flex items-center gap-4">
+        <a href="/api/docs/" class="hover:text-slate-300">OpenAPI Spec</a>
+        <a href="/api/health/" class="hover:text-slate-300">Health Check</a>
+        <a href="https://github.com" target="_blank" class="hover:text-slate-300"><i class="fa-brands fa-github"></i> GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script logic -->
+  <script>
+    let currentSelectedFile = null;
+
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const clearImageBtn = document.getElementById('clearImageBtn');
+    const processBtn = document.getElementById('processBtn');
+    const extractBtn = document.getElementById('extractBtn');
+    const processingBadge = document.getElementById('processingBadge');
+    const emptyResult = document.getElementById('emptyResult');
+    const resultsCard = document.getElementById('resultsCard');
+
+    // Drag and drop setup
+    dropZone.addEventListener('click', (e) => {
+      if (e.target !== clearImageBtn && !clearImageBtn.contains(e.target)) {
+        fileInput.click();
+      }
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-indigo-500', 'bg-indigo-950/20');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        setSelectedFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        setSelectedFile(e.target.files[0]);
+      }
+    });
+
+    clearImageBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentSelectedFile = null;
+      fileInput.value = '';
+      previewContainer.classList.add('hidden');
+      uploadPrompt.classList.remove('hidden');
+    });
+
+    function setSelectedFile(file) {
+      currentSelectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imagePreview.src = e.target.result;
+        uploadPrompt.classList.add('hidden');
+        previewContainer.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Process button (Upload & Store)
+    processBtn.addEventListener('click', async () => {
+      if (!currentSelectedFile) {
+        alert('Please select or drag a receipt image first.');
+        return;
+      }
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append('image', currentSelectedFile);
+      formData.append('auto_process', 'true');
+
+      try {
+        const response = await fetch('/api/receipts/', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        renderResult(data);
+        loadAnalytics();
+        loadReceipts();
+      } catch (err) {
+        alert('Error processing receipt: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Extract only button (Stateless)
+    extractBtn.addEventListener('click', async () => {
+      if (!currentSelectedFile) {
+        alert('Please select or drag a receipt image first.');
+        return;
+      }
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append('image', currentSelectedFile);
+
+      try {
+        const response = await fetch('/api/receipts/extract/', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        
+        // Normalize payload to match result renderer
+        const normalized = {
+          merchant_name: data.parsed_data.merchant_name,
+          transaction_date: data.parsed_data.transaction_date,
+          total_amount: data.parsed_data.total_amount,
+          subtotal_amount: data.parsed_data.subtotal_amount,
+          tax_amount: data.parsed_data.tax_amount,
+          tip_amount: data.parsed_data.tip_amount,
+          currency: data.parsed_data.currency,
+          payment_method: data.parsed_data.payment_method,
+          category: data.parsed_data.category,
+          category_display: data.parsed_data.category,
+          ocr_engine: data.ocr_engine,
+          ocr_confidence: data.confidence,
+          raw_text: data.raw_text,
+          items: data.parsed_data.items || []
+        };
+        renderResult(normalized);
+      } catch (err) {
+        alert('Error extracting receipt data: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    function setLoading(isLoading) {
+      if (isLoading) {
+        processingBadge.classList.remove('hidden');
+        processBtn.disabled = true;
+        extractBtn.disabled = true;
+      } else {
+        processingBadge.classList.add('hidden');
+        processBtn.disabled = false;
+        extractBtn.disabled = false;
+      }
+    }
+
+    function renderResult(data) {
+      emptyResult.classList.add('hidden');
+      resultsCard.classList.remove('hidden');
+
+      document.getElementById('resMerchant').textContent = data.merchant_name || 'N/A';
+      document.getElementById('resDate').textContent = data.transaction_date || 'N/A';
+      document.getElementById('resTotal').textContent = data.total_amount ? `${data.currency || '$'} ${data.total_amount}` : 'N/A';
+      document.getElementById('resCategory').textContent = data.category_display || data.category || 'OTHER';
+
+      document.getElementById('resSubtotal').textContent = data.subtotal_amount ? `${data.currency || '$'} ${data.subtotal_amount}` : '--';
+      document.getElementById('resTax').textContent = data.tax_amount ? `${data.currency || '$'} ${data.tax_amount}` : '--';
+      document.getElementById('resTip').textContent = data.tip_amount ? `${data.currency || '$'} ${data.tip_amount}` : '--';
+      document.getElementById('resPayment').textContent = data.payment_method || '--';
+      document.getElementById('resEngine').textContent = data.ocr_engine || 'auto';
+      document.getElementById('resConfidence').textContent = `${data.ocr_confidence || 85}%`;
+
+      document.getElementById('resRawText').textContent = data.raw_text || 'No OCR text available.';
+
+      // Render line items
+      const tbody = document.getElementById('lineItemsTableBody');
+      tbody.innerHTML = '';
+      if (data.items && data.items.length > 0) {
+        data.items.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="py-2 px-3 font-medium text-slate-200">${item.description}</td>
+            <td class="py-2 px-3 text-center text-slate-400">${item.quantity || 1}</td>
+            <td class="py-2 px-3 text-right text-slate-200 font-mono">${data.currency || '$'}${item.total_price || '--'}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } else {
+        tbody.innerHTML = `<tr><td colspan="3" class="py-3 px-3 text-center text-slate-500">No individual line items parsed</td></tr>`;
+      }
+    }
+
+    // Load sample receipts by creating synthetic canvas image
+    function loadSampleReceipt(type) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 20px monospace';
+
+      let filename = 'sample_receipt.png';
+
+      if (type === 'coffee') {
+        filename = 'starbucks_coffee_receipt.png';
+        ctx.fillText('STARBUCKS COFFEE #10423', 80, 80);
+        ctx.font = '16px monospace';
+        ctx.fillText('123 MARKET STREET, SAN FRANCISCO', 80, 110);
+        ctx.fillText('DATE: 2024-10-15 08:42 AM', 80, 140);
+        ctx.fillText('--------------------------------', 80, 170);
+        ctx.fillText('1 CARAMEL MACCHIATO    $5.45', 80, 210);
+        ctx.fillText('1 CROISSANT             $3.75', 80, 240);
+        ctx.fillText('--------------------------------', 80, 270);
+        ctx.fillText('SUBTOTAL:               $9.20', 80, 310);
+        ctx.fillText('TAX:                    $0.78', 80, 340);
+        ctx.fillText('TIP:                    $1.50', 80, 370);
+        ctx.fillText('TOTAL:                 $11.48', 80, 410);
+        ctx.fillText('PAYMENT: VISA ****4242', 80, 450);
+      } else if (type === 'grocery') {
+        filename = 'whole_foods_grocery.png';
+        ctx.fillText('WHOLE FOODS MARKET', 100, 80);
+        ctx.font = '16px monospace';
+        ctx.fillText('450 RHODE ISLAND ST', 100, 110);
+        ctx.fillText('DATE: 10/12/2024 14:30', 100, 140);
+        ctx.fillText('================================', 100, 170);
+        ctx.fillText('ORGANIC WHOLE MILK     $4.99', 100, 210);
+        ctx.fillText('SOURDOUGH BREAD        $5.50', 100, 240);
+        ctx.fillText('AVOCADOS 3PK           $3.99', 100, 270);
+        ctx.fillText('ORGANIC APPLES         $6.49', 100, 300);
+        ctx.fillText('================================', 100, 330);
+        ctx.fillText('SUBTOTAL:             $20.97', 100, 370);
+        ctx.fillText('TAX:                   $1.68', 100, 400);
+        ctx.fillText('TOTAL:                $22.65', 100, 440);
+        ctx.fillText('PAYMENT: MASTERCARD 5521', 100, 480);
+      } else {
+        filename = 'bistro_restaurant_bill.png';
+        ctx.fillText('THE CAPITAL BISTRO', 100, 80);
+        ctx.font = '16px monospace';
+        ctx.fillText('789 DOWNTOWN AVE', 100, 110);
+        ctx.fillText('DATE: 2024-09-28 20:15', 100, 140);
+        ctx.fillText('--------------------------------', 100, 170);
+        ctx.fillText('1 GRILLED SALMON       $28.00', 100, 210);
+        ctx.fillText('1 RIBEYE STEAK         $36.00', 100, 240);
+        ctx.fillText('2 SPARKLING WATER       $8.00', 100, 270);
+        ctx.fillText('1 CHOCOLATE LAVA CAKE  $11.00', 100, 300);
+        ctx.fillText('--------------------------------', 100, 330);
+        ctx.fillText('SUBTOTAL:              $83.00', 100, 370);
+        ctx.fillText('TAX:                    $7.47', 100, 400);
+        ctx.fillText('TIP:                   $15.00', 100, 430);
+        ctx.fillText('TOTAL:                $105.47', 100, 470);
+        ctx.fillText('PAYMENT: AMEX 1004', 100, 510);
+      }
+
+      canvas.toBlob(blob => {
+        const file = new File([blob], filename, { type: 'image/png' });
+        setSelectedFile(file);
+      }, 'image/png');
+    }
+
+    // Load History Table
+    async function loadReceipts() {
+      try {
+        const response = await fetch('/api/receipts/');
+        if (!response.ok) return;
+        const data = await response.json();
+        const receipts = data.results || data;
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = '';
+
+        if (!receipts || receipts.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">No receipts scanned yet. Upload your first one above!</td></tr>`;
+          return;
+        }
+
+        receipts.forEach(r => {
+          const row = document.createElement('tr');
+          row.className = "hover:bg-slate-800/50 transition";
+          row.innerHTML = `
+            <td class="py-3 px-3 font-medium text-white">${r.merchant_name || 'Unknown'}</td>
+            <td class="py-3 px-3 text-slate-400">${r.transaction_date || '--'}</td>
+            <td class="py-3 px-3">
+              <span class="px-2 py-0.5 rounded-full bg-slate-800 text-indigo-400 border border-slate-700 text-xs">${r.category_display || r.category}</span>
+            </td>
+            <td class="py-3 px-3 text-right font-mono font-bold text-emerald-400">${r.currency || '$'}${r.total_amount || '0.00'}</td>
+            <td class="py-3 px-3 text-slate-400">${r.payment_method || '--'}</td>
+            <td class="py-3 px-3">
+              <span class="px-2 py-0.5 rounded-full ${r.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'} text-xs font-semibold">${r.status}</span>
+            </td>
+            <td class="py-3 px-3 text-center">
+              <button onclick='viewReceiptDetail(${JSON.stringify(r)})' class="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700">
+                <i class="fa-solid fa-eye"></i> View
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (e) {
+        console.error('Error loading receipts:', e);
+      }
+    }
+
+    function viewReceiptDetail(r) {
+      renderResult(r);
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+    }
+
+    // Load Analytics
+    async function loadAnalytics() {
+      try {
+        const response = await fetch('/api/receipts/analytics/');
+        if (!response.ok) return;
+        const data = await response.json();
+
+        document.getElementById('statTotalCount').textContent = data.total_receipts || 0;
+        document.getElementById('statTotalSpent').textContent = `$${(data.total_spent || 0).toFixed(2)}`;
+        document.getElementById('statAvgSpent').textContent = `$${(data.average_transaction || 0).toFixed(2)}`;
+      } catch (e) {
+        console.error('Error loading analytics:', e);
+      }
+    }
+
+    // Load Health Check
+    async function checkHealth() {
+      try {
+        const response = await fetch('/api/health/');
+        if (!response.ok) return;
+        const data = await response.json();
+        document.getElementById('statEngine').textContent = data.tesseract_installed ? "Tesseract OCR" : "Heuristic NLP";
+        document.getElementById('statEngineDetails').textContent = data.tesseract_installed ? "Native engine active" : "Auto-fallback active";
+      } catch (e) {
+        console.error('Health check error:', e);
+      }
+    }
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+      checkHealth();
+      loadAnalytics();
+      loadReceipts();
+    });
+  </script>
+</body>
+</html>

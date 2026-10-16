@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: receipt_ocr_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - receipt_media:/app/media
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-docker-demo-secret-key-12345
+      - ALLOWED_HOSTS=*
+      - OCR_ENGINE=auto
+    restart: unless-stopped
+
+volumes:
+  receipt_media:
