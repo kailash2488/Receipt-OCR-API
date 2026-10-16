@@ -9,3 +9,4 @@ urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('', include(router.urls)),
 ]
+

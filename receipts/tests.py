@@ -15,12 +15,25 @@ from receipts.services.ocr_service import OCRService
 from receipts.services.analytics_service import AnalyticsService
 
 
+from PIL import Image, ImageDraw
+
+
 def create_dummy_image(name="test_receipt.png") -> SimpleUploadedFile:
     file_obj = io.BytesIO()
-    image = Image.new("RGB", (300, 400), color=(255, 255, 255))
+    image = Image.new("RGB", (500, 400), color=(255, 255, 255))
+    draw = ImageDraw.Draw(image)
+    draw.text((30, 30), "STARBUCKS COFFEE #10423", fill=(0, 0, 0))
+    draw.text((30, 60), "123 MARKET STREET", fill=(0, 0, 0))
+    draw.text((30, 90), "DATE: 2024-10-15 08:42 AM", fill=(0, 0, 0))
+    draw.text((30, 120), "------------------------", fill=(0, 0, 0))
+    draw.text((30, 150), "1 LATTE             $5.45", fill=(0, 0, 0))
+    draw.text((30, 180), "------------------------", fill=(0, 0, 0))
+    draw.text((30, 210), "TOTAL:              $5.45", fill=(0, 0, 0))
+    draw.text((30, 240), "PAYMENT: VISA 4242", fill=(0, 0, 0))
     image.save(file_obj, format="PNG")
     file_obj.seek(0)
     return SimpleUploadedFile(name, file_obj.read(), content_type="image/png")
+
 
 
 class ReceiptParserTests(TestCase):

@@ -29,3 +29,4 @@ EXPOSE 8000
 
 # Default run command
 CMD ["sh", "-c", "python manage.py migrate && python manage.py seed_receipts && python manage.py runserver 0.0.0.0:8000"]
+

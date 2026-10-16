@@ -115,6 +115,12 @@ class ReceiptViewSet(viewsets.ModelViewSet):
             receipt.ocr_engine = ocr_result.get("engine", "unknown")
             receipt.ocr_confidence = ocr_result.get("confidence", 0.0)
 
+            if not raw_text.strip():
+                receipt.status = 'FAILED'
+                receipt.error_message = ocr_result.get("error") or "No readable text detected in receipt image."
+                receipt.save()
+                return
+
             # 2. Heuristic Data Parsing
             parsed = ReceiptParser.parse(raw_text)
 
@@ -171,6 +177,16 @@ class ReceiptViewSet(viewsets.ModelViewSet):
         try:
             ocr_result = OCRService.extract_text(tmp_path)
             raw_text = ocr_result.get("raw_text", "")
+
+            if not raw_text.strip():
+                return Response({
+                    "ocr_engine": ocr_result.get("engine", "tesseract"),
+                    "confidence": 0.0,
+                    "raw_text": "",
+                    "parsed_data": {},
+                    "error": ocr_result.get("error") or "No readable text detected in receipt image."
+                }, status=status.HTTP_200_OK)
+
             parsed = ReceiptParser.parse(raw_text)
 
             response_data = {
@@ -252,13 +268,16 @@ class HealthCheckView(APIView):
         description="Health check and engine status."
     )
     def get(self, request):
-        import shutil
-        has_tesseract = bool(shutil.which('tesseract'))
+        import os
+        has_tesseract = bool(OCRService._find_tesseract_binary())
+        has_gemini = bool(os.getenv("GEMINI_API_KEY"))
+        active = "gemini_vision" if has_gemini else ("tesseract" if has_tesseract else "heuristic_fallback")
         return Response({
             "status": "healthy",
             "version": "1.0.0",
             "tesseract_installed": has_tesseract,
-            "active_ocr_engine": "tesseract" if has_tesseract else "heuristic_fallback",
+            "gemini_configured": has_gemini,
+            "active_ocr_engine": active,
         }, status=status.HTTP_200_OK)
 
 

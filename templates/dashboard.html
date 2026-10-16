@@ -619,9 +619,16 @@
       try {
         const response = await fetch('/api/health/');
         if (!response.ok) return;
-        const data = await response.json();
-        document.getElementById('statEngine').textContent = data.tesseract_installed ? "Tesseract OCR" : "Heuristic NLP";
-        document.getElementById('statEngineDetails').textContent = data.tesseract_installed ? "Native engine active" : "Auto-fallback active";
+        if (data.gemini_configured) {
+          document.getElementById('statEngine').textContent = "Gemini AI Vision";
+          document.getElementById('statEngineDetails').textContent = "Multimodal AI Active (Tesseract fallback)";
+        } else if (data.tesseract_installed) {
+          document.getElementById('statEngine').textContent = "Tesseract OCR";
+          document.getElementById('statEngineDetails').textContent = "Native local engine active";
+        } else {
+          document.getElementById('statEngine').textContent = "Heuristic NLP";
+          document.getElementById('statEngineDetails').textContent = "Auto-fallback active";
+        }
       } catch (e) {
         console.error('Health check error:', e);
       }

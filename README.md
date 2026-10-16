@@ -339,3 +339,4 @@ Feel free to check the [issues page](https://github.com/kailash2488/receipt-ocr-
 ## 📄 License
 
 This project is open-source and licensed under the [MIT License](LICENSE).
+

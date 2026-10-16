@@ -366,3 +366,4 @@ class ReceiptParser:
             return best_category
 
         return 'OTHER'
+

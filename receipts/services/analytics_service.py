@@ -87,3 +87,4 @@ class AnalyticsService:
                 for item in top_merchants
             ]
         }
+

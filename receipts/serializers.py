@@ -96,5 +96,7 @@ class HealthCheckSerializer(serializers.Serializer):
     status = serializers.CharField()
     version = serializers.CharField()
     tesseract_installed = serializers.BooleanField()
+    gemini_configured = serializers.BooleanField()
     active_ocr_engine = serializers.CharField()
+
 

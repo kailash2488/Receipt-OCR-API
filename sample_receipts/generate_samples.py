@@ -93,3 +93,4 @@ if __name__ == "__main__":
         "PAYMENT: AMEX 1004"
     ]
     create_receipt_image(os.path.join(base_dir, "capital_bistro_dinner.png"), bistro_lines)
+
